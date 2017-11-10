@@ -41,36 +41,16 @@ class RancherConnector(object):
         self.start()
 
     def _prerender(self):
-        instances = None
+        websites = None
         api = API(self.rancher_host, self.rancher_port, self.project_id,
                   self.api_token, self.ssl)
 
-        # If we're not filtering by stack and services, then load all instances
-        # in the environment
-        if self.stack is None and self.services is None:
-            instances = api.get_instances()
+        websites = api.get_websites()
 
-        # If we're only filterting by stack, then load the instances for that
-        # stack
-        elif self.stack and self.services is None:
-            instances = api.get_instances(stack_name=self.stack)
-
-        # If we're filtering by stack and service, then load the instances for
-        # that service
-        elif self.stack and self.services and len(self.services) > 0:
-            api = API(self.rancher_host, self.rancher_port, self.project_id,
-                      self.api_token, self.ssl)
-            services = api.get_services(self.stack, self.services)
-
-            instances = []
-            if len(services) > 0:
-                for service in services:
-                    instances += api.get_instances(service)
-
-        # If we found any instnaces, then render the template
-        if instances is None:
-            instances = []
-        render_template(instances, self.template, self.dest)
+     
+        if websites is None:
+            websites = []
+        render_template(websites, self.template, self.dest)
         notify(self.notify)
 
     def start(self):
@@ -134,58 +114,23 @@ class MessageHandler(Thread):
             api = API(self.rancher_host, self.rancher_port, self.project_id,
                       self.api_token, self.ssl)
 
-            # Filter by stack and/or service name if specified
-            if self.stack:
-                # Some instnaces like Network Agents don't have labels, and
-                # don't really belong to a stack and/or service, so if this
-                # message has to do with one of those instances, then we
-                # need to ignore it.
-                if resource['labels'] is None:
-                    return
+            websites = api.get_websites()
+            self._render_and_notify(websites)
 
-                stack_name = resource['labels']['io.rancher.stack.name']
-                service_name =\
-                    resource['labels']['io.rancher.stack_service.name']
-                service_name = service_name.split('/')[1]
-
-                # if the stacks don't match, then simply return
-                if stack_name != self.stack:
-                    return
-
-                # If we're filtering by service, then load the instances for
-                # this sevice
-                if self.services and len(self.services) > 0:
-                    if service_name not in self.services:
-                        return
-
-                    services = api.get_services(self.stack, self.services)
-                    instances = []
-                    if len(services) > 0:
-                        for service in services:
-                            instances += api.get_instances(service)
-                        self._render_and_notify(instances)
-                        return
-
-                instances = api.get_instances(stack_name=self.stack)
-                self._render_and_notify(instances)
-            else:
-                instances = api.get_instances()
-                self._render_and_notify(instances)
-
-    def _render_and_notify(self, instances):
-        if instances is None:
+    def _render_and_notify(self, websites):
+        if websites is None:
             render_template([], self.template, self.dest)
         else:
-            render_template(instances, self.template, self.dest)
+            render_template(websites, self.template, self.dest)
         notify(self.notify)
 
 
-def render_template(instances, template, dest):
+def render_template(websites, template, dest):
     template_dir = os.path.dirname(template)
     template_filename = os.path.basename(template)
     env = Environment(loader=FileSystemLoader(template_dir))
     template = env.get_template(template_filename)
-    result = template.render(containers=instances)
+    result = template.render(websites=websites)
 
     with open(dest, 'w') as fh:
         fh.write(result)
