@@ -126,11 +126,12 @@ class MessageHandler(Thread):
 
 
 def render_template(websites, template, dest):
+    website_names = list(websites.keys())
     template_dir = os.path.dirname(template)
     template_filename = os.path.basename(template)
     env = Environment(loader=FileSystemLoader(template_dir))
     template = env.get_template(template_filename)
-    result = template.render(websites=websites)
+    result = template.render(websites=website_names, containers=websites)
 
     with open(dest, 'w') as fh:
         fh.write(result)
