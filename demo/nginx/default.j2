@@ -1,32 +1,85 @@
-{% for website in websites %}
 
-upstream {% website%} {
-{% for container in websites[website] %}
+proxy_buffers 256 16k;
+proxy_buffer_size 32k;
+#httpoxy exploit protection
+proxy_set_header Proxy "";
+proxy_cache_key $scheme$host$request_uri;
+proxy_connect_timeout       600;
+proxy_send_timeout          600;
+proxy_read_timeout          600;
+send_timeout                600;
+
+{% for website in websites %}
+proxy_cache_path  /var/run/proxy_cache levels=1:2 keys_zone={{website}}-proxy:10m max_size=1000m inactive=600m use_temp_path=off;
+    
+upstream {{website}} {
+{% for container in containers[website] %}
   {% if container['state'] == "running" %}
-  server {{container['primaryIpAddress']}}:{% websites[website][0]['labels']['container_port'] %};
+  server {{container['primaryIpAddress']}}:{{container['labels']['container_port']}};
   {% endif %}
 {% endfor %}
 }
 server {
-    
-    server_name {% websites[website][0]['labels']['server_name'] %};
-    {% if websites[website][0]['labels']['server_protocol'] == "https" %}
+
+    server_name {{containers[website][0]['labels']['server_name']}};
+    {% if containers[website][0]['labels']['server_protocol'] == "https" %}
         listen 443 ssl;
-        ssl_certificate     {%websites[website][0]['labels']['ssl_certificate'] %};
-        ssl_certificate_key {%websites[website][0]['labels']['ssl_certificate_key'] %};
+        ssl_certificate     {{containers[website][0]['labels']['ssl_certificate']}};
+        ssl_certificate_key {{containers[website][0]['labels']['ssl_certificate_key']}};
         ssl_protocols       TLSv1 TLSv1.1 TLSv1.2;
         ssl_ciphers         HIGH:!aNULL:!MD5;
     {% else %}
         listen 80;
     {% endif %}
+    
+    set $do_not_cache 0;
+set $bypass 0;
+
+
+    access_log /var/log/nginx/proxy-{{website}}-access.log;
+    error_log /var/log/nginx/proxy-{{website}}-error.log;
+    add_header X-Cache $upstream_cache_status;
+    #security for bypass
+if ($remote_addr ~ "^(127.0.0.1{% for container in containers[website] %}{% if container['state'] == "running" %}|{{container['primaryIpAddress']}}{% endif %}{% endfor %})$") {
+        set $bypass $http_secret_header;
+    }
+
+if ($http_cookie ~* "comment_author_|wordpress_(?!test_cookie)|wp-postpass_" ) {
+            set $do_not_cache 1;
+        }
+        
+   
     location / {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header HOST $http_host;
         proxy_set_header X-NginX-Proxy true;
 
-        proxy_pass {% website%};
+        proxy_pass {{website}};
         proxy_redirect off;
+        
+        proxy_cache {{website}}-proxy;
+        proxy_cache_revalidate on;
+        proxy_ignore_headers  Expires Cache-Control;
+        proxy_cache_use_stale  error timeout invalid_header updating http_500 http_502 http_503 http_504;
+        proxy_cache_bypass $bypass $do_not_cache;
+        proxy_no_cache $do_not_cache;
+        proxy_cache_valid 200 301 302 500m;
+        proxy_cache_valid 404 1m;
+        #can rename PURGE to whatever you want, should restrict it to backend server requests for security
+        proxy_cache_purge PURGE from 127.0.0.1 {% for container in containers[website] %}{% if container['state'] == "running" %} {{container['primaryIpAddress']}}  {% endif %}{% endfor %};
     }
+    
+    location ~ /purge(/.*) {
+        allow 127.0.0.1;
+        {% for container in containers[website] %}
+  {% if container['state'] == "running" %}
+  allow {{container['primaryIpAddress']}};
+  {% endif %}
+{% endfor %}
+        
+        deny all;
+        proxy_cache_purge {{website}}-proxy $scheme$host$1;
+      }
 }
 {% endfor %}
 
