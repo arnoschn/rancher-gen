@@ -39,7 +39,28 @@ class API(object):
         elif stack and service:
             return self._get_service_from_stack(stack, service)
         return None
+    
+    def get_websites(self):
+        """ Gets all services grouped by website
+        """
+        url = '{0}://{1}:{2}/v1/projects/{3}/instances'\
+                .format(self._protocol, self.host, self.port, self.project_id)
+     
+        res = requests.get(url, headers=self._headers)
+        websites = {}
+        res_data = res.json()
+        if res_data['data']:
+            for resource in res_data['data']:
+                labels = resource['labels']
+                if labels and 'website' in labels
+                    if not labels['website'] in websites:
+                        websites[labels['website']] = []
+                    websites[labels['website']].append(resource)
+            if len(websites) > 0:
+                return websites
 
+        return None
+    
     def get_instances(self, service=None, stack_name=None):
         """ Gets the list of instances from a service.
 
