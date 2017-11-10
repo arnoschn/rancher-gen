@@ -1,21 +1,35 @@
-upstream ghost.backend {
-{% for container in containers %}
+{% for website in websites %}
+
+upstream {% website%} {
+{% for container in websites[website] %}
   {% if container['state'] == "running" %}
-  server {{container['primaryIpAddress']}}:2368;
+  server {{container['primaryIpAddress']}}:{% websites[website][0]['labels']['container_port'] %};
   {% endif %}
 {% endfor %}
 }
-
 server {
-    listen 80;
-    server_name ghost_demo;
-
+    
+    server_name {% websites[website][0]['labels']['server_name'] %};
+    {% if websites[website][0]['labels']['server_protocol'] == "https" %}
+        listen 443 ssl;
+        ssl_certificate     {%websites[website][0]['labels']['ssl_certificate'] %};
+        ssl_certificate_key {%websites[website][0]['labels']['ssl_certificate_key'] %};
+        ssl_protocols       TLSv1 TLSv1.1 TLSv1.2;
+        ssl_ciphers         HIGH:!aNULL:!MD5;
+    {% else %}
+        listen 80;
+    {% endif %}
     location / {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header HOST $http_host;
         proxy_set_header X-NginX-Proxy true;
 
-        proxy_pass http://ghost.backend;
+        proxy_pass {% website%};
         proxy_redirect off;
     }
 }
+{% endfor %}
+
+
+
+
