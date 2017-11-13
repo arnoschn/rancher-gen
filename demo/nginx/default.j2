@@ -19,6 +19,13 @@ upstream {{website}} {
   {% endif %}
 {% endfor %}
 }
+{% if containers[website][0]['labels']['server_protocol'] == "https" %}
+server {
+	listen 80;
+	server_name {{containers[website][0]['labels']['server_name']}};
+	return 301 https://$server_name$request_uri;
+}
+{% endif }
 server {
 
     server_name {{containers[website][0]['labels']['server_name']}};
@@ -54,7 +61,7 @@ if ($http_cookie ~* "comment_author_|wordpress_(?!test_cookie)|wp-postpass_" ) {
         proxy_set_header HOST $http_host;
         proxy_set_header X-NginX-Proxy true;
 
-        proxy_pass {{website}};
+        proxy_pass http://{{website}};
         proxy_redirect off;
         
         proxy_cache {{website}}-proxy;
