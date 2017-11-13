@@ -52,7 +52,7 @@ class API(object):
         if res_data['data']:
             for resource in res_data['data']:
                 labels = resource['labels']
-                if labels and 'website' in labels
+                if labels and 'website' in labels:
                     if not labels['website'] in websites:
                         websites[labels['website']] = []
                     websites[labels['website']].append(resource)
