@@ -25,7 +25,7 @@ server {
 	server_name {{containers[website][0]['labels']['server_name']}};
 	return 301 https://$server_name$request_uri;
 }
-{% endif }
+{% endif %}
 server {
 
     server_name {{containers[website][0]['labels']['server_name']}};
