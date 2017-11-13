@@ -9,6 +9,7 @@ RUN \
   apt-get install -y python-software-properties \
     wget \
     nginx \
+    nginx-extras \
     python-dev \
     python-pip \
     libev4 \
