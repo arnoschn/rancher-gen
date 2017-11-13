@@ -50,7 +50,7 @@ set $bypass 0;
 if ($remote_addr ~ "^(127.0.0.1{% for container in containers[website] %}{% if container['state'] == "running" %}|{{container['primaryIpAddress']}}{% endif %}{% endfor %})$") {
         set $bypass $http_secret_header;
     }
-    if ($request_uri ~ "/wp-admin") {
+    if ($request_uri ~* "/wp-admin") {
     set $do_not_cache 1;
     }
 
