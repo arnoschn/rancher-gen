@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 import requests
-
+import json
 
 class API(object):
 
@@ -74,13 +74,10 @@ class API(object):
             for resource in res_data['data']:
                 labels = resource['labels']
                 if labels and 'static_websites' in labels:
-                    configs = labels['static_websites'].split(" ")
+                    configs = labels['static_websites'].split("<>")
                     for config in configs:
-                        config_items = config.split(":")
-                        domains = config_items[1].split(",")
-                        if not config_items[0] in websites:
-                            websites[config_items[0]] = []
-                        websites[config_items[0]] = websites[config_items[0]]+domains
+                        config_json = json.loads(config)
+                        websites[config_items[0]] = config_json
             if len(websites) > 0:
                 return websites
 
