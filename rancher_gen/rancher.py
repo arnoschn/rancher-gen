@@ -61,6 +61,31 @@ class API(object):
 
         return None
     
+    def get_static_websites(self):
+        """ Gets all services grouped by website
+        """
+        url = '{0}://{1}:{2}/v1/projects/{3}/instances'\
+                .format(self._protocol, self.host, self.port, self.project_id)
+     
+        res = requests.get(url, headers=self._headers)
+        websites = {}
+        res_data = res.json()
+        if res_data['data']:
+            for resource in res_data['data']:
+                labels = resource['labels']
+                if labels and 'static_websites' in labels:
+                    configs = labels['static_websites'].split(" ")
+                    for config in configs:
+                        config_items = config.split(":")
+                        domains = config_items[1].split(",")
+                        if not config_items[0] in websites:
+                            websites[config_items[0]] = []
+                        websites[config_items[0]] = websites[config_items[0]]+domains
+            if len(websites) > 0:
+                return websites
+
+        return None
+    
     def get_instances(self, service=None, stack_name=None):
         """ Gets the list of instances from a service.
 
