@@ -46,11 +46,13 @@ class RancherConnector(object):
                   self.api_token, self.ssl)
 
         websites = api.get_websites()
-
+        statics = api.get_static_websites()
      
         if websites is None:
             websites = []
-        render_template(websites, self.template, self.dest)
+        if statics is None:
+            statics = []
+        render_template(websites,statics, self.template, self.dest)
         notify(self.notify)
 
     def start(self):
@@ -125,13 +127,14 @@ class MessageHandler(Thread):
         notify(self.notify)
 
 
-def render_template(websites, template, dest):
+def render_template(websites, statics, template, dest):
     website_names = list(websites.keys())
+    static_websites_names = list(statics.keys())
     template_dir = os.path.dirname(template)
     template_filename = os.path.basename(template)
     env = Environment(loader=FileSystemLoader(template_dir))
     template = env.get_template(template_filename)
-    result = template.render(websites=website_names, containers=websites)
+    result = template.render(websites=website_names, containers=websites, static_websites = static_websites_names, static_containers=statics)
 
     with open(dest, 'w') as fh:
         fh.write(result)
