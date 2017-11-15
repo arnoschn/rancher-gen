@@ -74,11 +74,8 @@ class API(object):
             for resource in res_data['data']:
                 labels = resource['labels']
                 if labels and 'static_websites' in labels:
-                    configs = labels['static_websites'].split("<>")
-                    for config in configs:
-                        config_items = config.split("->")
-                        config_json = json.loads(config_items[1])
-                        websites[config_items[0]] = config_json
+                    websites.update(json.loads(labels['static_websites']))
+                   
             if len(websites) > 0:
                 return websites
 
