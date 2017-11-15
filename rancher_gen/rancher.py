@@ -76,7 +76,8 @@ class API(object):
                 if labels and 'static_websites' in labels:
                     configs = labels['static_websites'].split("<>")
                     for config in configs:
-                        config_json = json.loads(config)
+                        config_items = config.split("->")
+                        config_json = json.loads(config_items[1])
                         websites[config_items[0]] = config_json
             if len(websites) > 0:
                 return websites
