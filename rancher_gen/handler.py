@@ -117,7 +117,8 @@ class MessageHandler(Thread):
                       self.api_token, self.ssl)
 
             websites = api.get_websites()
-            self._render_and_notify(websites)
+            statics = api.get_static_websites()
+            self._render_and_notify(websites,statics)
 
     def _render_and_notify(self, websites, statics):
         if websites is None:
