@@ -119,11 +119,11 @@ class MessageHandler(Thread):
             websites = api.get_websites()
             self._render_and_notify(websites)
 
-    def _render_and_notify(self, websites):
+    def _render_and_notify(self, websites, statics):
         if websites is None:
             render_template([], self.template, self.dest)
         else:
-            render_template(websites, self.template, self.dest)
+            render_template(websites, statics, self.template, self.dest)
         notify(self.notify)
 
 
